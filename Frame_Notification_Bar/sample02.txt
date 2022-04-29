@@ -1,0 +1,76 @@
+' https://www.ka-net.org/blog/?p=4944
+' Office クリップボードをマクロで操作する(UI Automation)
+
+Private Sub DoActionOfficeClipboard(ByVal ButtonName As String)
+'Officeクリップボードコマンド実行
+  Dim uiAuto As UIAutomationClient.CUIAutomation
+  Dim accClipboard As Office.IAccessible
+  Dim elmClipboard As UIAutomationClient.IUIAutomationElement
+  Dim elmButton As UIAutomationClient.IUIAutomationElement
+  Dim cndButtons As UIAutomationClient.IUIAutomationCondition
+  Dim aryButtons As UIAutomationClient.IUIAutomationElementArray
+  Dim ptnAcc As UIAutomationClient.IUIAutomationLegacyIAccessiblePattern
+  Dim i As Long
+   
+  Set elmButton = Nothing '初期化
+  Set uiAuto = New UIAutomationClient.CUIAutomation
+  With Application
+    .CommandBars("Office Clipboard").Visible = True
+    DoEvents
+    Set accClipboard = .CommandBars("Office Clipboard")
+  End With
+  Set elmClipboard = uiAuto.ElementFromIAccessible(accClipboard, 0)
+  Set cndButtons = uiAuto.CreatePropertyCondition(UIA_ControlTypePropertyId, UIA_ButtonControlTypeId)
+  Set aryButtons = elmClipboard.FindAll(TreeScope_Subtree, cndButtons)
+  For i = 0 To aryButtons.Length - 1
+    If aryButtons.GetElement(i).CurrentName = ButtonName Then
+      Set elmButton = aryButtons.GetElement(i)
+      Exit For
+    End If
+  Next
+  If elmButton Is Nothing Then Exit Sub
+  If elmButton.CurrentIsEnabled <> False Then
+    Set ptnAcc = elmButton.GetCurrentPattern(UIA_LegacyIAccessiblePatternId)
+    ptnAcc.DoDefaultAction
+  End If
+End Sub
+ 
+Private Sub PasteOfficeClipboardListItem(ByVal ItemNum As Long)
+'Officeクリップボードに登録されているアイテムを貼り付け
+  Dim aryListItems As UIAutomationClient.IUIAutomationElementArray
+  Dim ptnAcc As UIAutomationClient.IUIAutomationLegacyIAccessiblePattern
+   
+  Set aryListItems = GetOfficeClipboardListItems
+  If (aryListItems.Length = 1) And _
+     (InStr(aryListItems.GetElement(0).CurrentName, "クリップボードは空です")) Then
+    MsgBox "クリップボードは空です。" & vbCrLf & _
+           "処理を中止します。", vbCritical + vbSystemModal
+    Exit Sub
+  End If
+  If (ItemNum > aryListItems.Length) Or _
+     (ItemNum < 1) Then
+    MsgBox "現在指定できる番号は [1 - " & aryListItems.Length & "]までです。" & vbCrLf & _
+           "処理を中止します。", vbCritical + vbSystemModal
+    Exit Sub
+  End If
+  Set ptnAcc = aryListItems.GetElement(ItemNum - 1).GetCurrentPattern(UIA_LegacyIAccessiblePatternId)
+  ptnAcc.DoDefaultAction
+End Sub
+ 
+Private Function GetOfficeClipboardListItems() As UIAutomationClient.IUIAutomationElementArray
+'Officeクリップボードリスト取得
+  Dim uiAuto As UIAutomationClient.CUIAutomation
+  Dim accClipboard As Office.IAccessible
+  Dim elmClipboard As UIAutomationClient.IUIAutomationElement
+  Dim cndListItems As UIAutomationClient.IUIAutomationCondition
+   
+  Set uiAuto = New UIAutomationClient.CUIAutomation
+  With Application
+    .CommandBars("Office Clipboard").Visible = True
+    DoEvents
+    Set accClipboard = .CommandBars("Office Clipboard")
+  End With
+  Set elmClipboard = uiAuto.ElementFromIAccessible(accClipboard, 0)
+  Set cndListItems = uiAuto.CreatePropertyCondition(UIA_ControlTypePropertyId, UIA_ListItemControlTypeId)
+  Set GetOfficeClipboardListItems = elmClipboard.FindAll(TreeScope_Subtree, cndListItems)
+End Function
