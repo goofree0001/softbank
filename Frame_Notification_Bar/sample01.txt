@@ -1,0 +1,76 @@
+' https://www.ka-net.org/blog/?p=6076
+' 起動中のMicrosoft EdgeからタイトルとURLを取得するVBAマクロ(UI Automation編)
+
+Option Explicit
+ 
+Private Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+ 
+Public Sub ListEdgeTabInfo()
+'起動中のEdgeのタブからタイトルとURLを取得
+'※ UIAutomationClient(UIAutomationCore.dll)要参照
+'※ Edgeが最小化状態の場合は実行不可
+  Dim uiAuto As UIAutomationClient.CUIAutomation
+  Dim elmDesktop As UIAutomationClient.IUIAutomationElement
+  Dim elmEdge As UIAutomationClient.IUIAutomationElement
+  Dim elmCoreWindow As UIAutomationClient.IUIAutomationElement
+  Dim elmTabsList As UIAutomationClient.IUIAutomationElement
+  Dim cndWindowControls As UIAutomationClient.IUIAutomationCondition
+  Dim cndCoreWindow As UIAutomationClient.IUIAutomationCondition
+  Dim cndTabsList As UIAutomationClient.IUIAutomationCondition
+  Dim cndListItems As UIAutomationClient.IUIAutomationCondition
+  Dim aryWindowControls As UIAutomationClient.IUIAutomationElementArray
+  Dim aryListItems As UIAutomationClient.IUIAutomationElementArray
+  Dim ptnSelectionItem As UIAutomationClient.IUIAutomationSelectionItemPattern
+  Dim i As Long
+   
+  'デスクトップ取得
+  Set uiAuto = New UIAutomationClient.CUIAutomation
+  Set elmDesktop = uiAuto.GetRootElement
+   
+  'Edge取得
+  Set cndWindowControls = uiAuto.CreatePropertyCondition(UIA_ControlTypePropertyId, UIA_WindowControlTypeId)
+  Set aryWindowControls = elmDesktop.FindAll(TreeScope_Subtree, cndWindowControls)
+  For i = 0 To aryWindowControls.Length - 1
+    If LCase(aryWindowControls.GetElement(i).CurrentName) Like "*microsoft edge" And _
+       aryWindowControls.GetElement(i).CurrentClassName = "ApplicationFrameWindow" Then
+      Set elmEdge = aryWindowControls.GetElement(i)
+      Exit For
+    End If
+  Next
+  If elmEdge Is Nothing Then Exit Sub
+   
+  '各タブ取得
+  Set cndCoreWindow = uiAuto.CreatePropertyCondition(UIA_ClassNamePropertyId, "Windows.UI.Core.CoreWindow")
+  Set elmCoreWindow = elmEdge.FindFirst(TreeScope_Subtree, cndCoreWindow)
+  If elmCoreWindow Is Nothing Then Exit Sub
+  Set cndTabsList = uiAuto.CreatePropertyCondition(UIA_AutomationIdPropertyId, "TabsList")
+  Set elmTabsList = elmCoreWindow.FindFirst(TreeScope_Subtree, cndTabsList)
+  If elmTabsList Is Nothing Then Exit Sub
+  Set cndListItems = uiAuto.CreatePropertyCondition(UIA_ControlTypePropertyId, UIA_ListItemControlTypeId)
+  Set aryListItems = elmTabsList.FindAll(TreeScope_Subtree, cndListItems)
+  For i = 0 To aryListItems.Length - 1
+    Set ptnSelectionItem = aryListItems.GetElement(i).GetCurrentPattern(UIA_SelectionItemPatternId)
+    ptnSelectionItem.Select 'タブ選択
+    Sleep 300
+    Debug.Print aryListItems.GetElement(i).CurrentName, GetTabURL(uiAuto, elmCoreWindow)
+  Next
+End Sub
+ 
+Private Function GetTabURL(ByVal uiAuto As UIAutomationClient.CUIAutomation, _
+                           ByVal elmCoreWindow As UIAutomationClient.IUIAutomationElement) As String
+'[検索または Web アドレスを入力]からURL取得
+  Dim elm As UIAutomationClient.IUIAutomationElement
+  Dim cnd As UIAutomationClient.IUIAutomationCondition
+  Dim url As String
+   
+  url = "" '初期化
+  On Error Resume Next
+  Set cnd = uiAuto.CreatePropertyCondition(UIA_AutomationIdPropertyId, "addressEditBox")
+  Set elm = elmCoreWindow.FindFirst(TreeScope_Subtree, cnd)
+  elm.SetFocus
+  Sleep 300
+  Set elm = elmCoreWindow.FindFirst(TreeScope_Subtree, cnd) 'フォーカス後再取得
+  url = elm.GetCurrentPropertyValue(UIA_ValueValuePropertyId)
+  On Error GoTo 0
+  GetTabURL = url
+End Function
