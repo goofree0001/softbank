@@ -1,0 +1,177 @@
+var holiday_ary = [
+["2022/9/19","敬老の日"],
+["2022/9/23","秋分の日"],
+["2022/10/10","スポーツの日"],
+["2022/11/3","文化の日"],
+["2022/11/23","勤労感謝の日"]
+];
+
+function set_trigger_first() {
+
+  var triggerDay = new Date;
+
+  triggerDay.setDate(triggerDay.getDate());
+  set_trigger_time(triggerDay)
+
+  var onChangeTrigger = ScriptApp.newTrigger("set_trigger")
+        .timeBased()
+        .at(triggerDay)
+        .create();
+}
+
+function set_trigger_time(triggerDay) {
+
+  triggerDay.setHours(07);
+  triggerDay.setMinutes(05);
+
+}
+
+function set_trigger() {
+
+  var triggerDay = new Date;
+
+  set_trigger_time(triggerDay)
+
+  var onChangeTrigger = ScriptApp.newTrigger("check_sendMail")
+        .timeBased()
+        .at(triggerDay)
+        .create();
+}
+
+function del_set_trigger_Trigger() {
+
+  const triggers = ScriptApp.getProjectTriggers();
+  for(const trigger of triggers){
+    if(trigger.getHandlerFunction() == "set_trigger"){
+      ScriptApp.deleteTrigger(trigger);
+    }
+  }
+  
+}
+function del_check_sendMail_Trigger() {
+
+  const triggers = ScriptApp.getProjectTriggers();
+  for(const trigger of triggers){
+    if(trigger.getHandlerFunction() == "check_sendMail"){
+      ScriptApp.deleteTrigger(trigger);
+    }
+  }
+  
+}
+
+function check_sendMail() {
+
+  if (is_holiday_today()) {
+    sendMail_holiday();
+    Logger.log("is_holiday:true");
+  } else {
+    sendMail();
+    sendMail_complete();
+    Logger.log("is_holiday:false");
+  }
+
+  del_set_trigger_Trigger();
+  del_check_sendMail_Trigger();
+
+  next_sendMail_trigger();
+
+}
+
+function sendMail() {
+
+  const recipient = 'a.nakamura@c-staffing.co.jp,m.kitagawa@c-staffing.co.jp,staff-sp@c-staffing.co.jp';
+  const subject = '出勤報告の件';
+  const body = 
+'中村様\n' +
+'北川様\n' +
+'水井様\n' +
+'\n' +
+'今から出勤します。\n' +
+'\n' +
+'----------------------------------------\n' +
+'----------------------------------------\n';
+
+  GmailApp.sendEmail(recipient, subject, body);
+
+}
+
+function sendMail_complete() {
+
+  const recipient = 'goofree0001@gmail.com';
+  const subject = '出勤報告送信完了';
+  const body = 
+'出勤報告送信完了\n';
+
+  GmailApp.sendEmail(recipient, subject, body);
+
+}
+
+function sendMail_holiday() {
+
+  const recipient = 'goofree0001@gmail.com';
+  const subject = '出勤報告送信 休日';
+  const body = 
+'出勤報告送信 休日\n';
+
+  GmailApp.sendEmail(recipient, subject, body);
+
+}
+
+function next_sendMail_trigger() {
+
+  var triggerDay = new Date;
+  triggerDay.setDate(triggerDay.getDate() + 1);
+  set_trigger_time(triggerDay)
+
+  var onChangeTrigger = ScriptApp.newTrigger("set_trigger")
+        .timeBased()
+        .at(triggerDay)
+        .create();
+
+}
+
+function is_holiday_today() {
+  Logger.log("is_holiday_test start");
+  var check_day = new Date();
+  check_day.setDate(check_day.getDate() + 0);
+  check_day.setHours(00);
+  check_day.setMinutes(00);
+  check_day.setSeconds(00);
+  Logger.log(new Date(check_day));
+  var result = is_holiday(check_day);
+  return result;
+}
+
+function is_holiday(check_day) {
+  var check_day = new Date(check_day);
+
+  Logger.log(check_day);
+
+  if (check_day.getDay() == 0 || check_day.getDay() == 6) {
+    return true;
+  }
+
+  for (var holiday_str of holiday_ary) {
+    var holiday = new Date(holiday_str[0]);
+    Logger.log(holiday);
+    if (date2str(holiday) == date2str(check_day)) {
+      return true;
+    }
+  }
+    return false;
+}
+
+function date2str(target_day) {
+
+  //日付オブジェクトを作成する
+  var dd = new Date(target_day);
+  //「年」を取得する
+  var YYYY = dd.getFullYear();
+  //「月」を取得する
+  var MM = dd.getMonth()+1;
+  //「日」を取得する
+  var DD = dd.getDate();
+
+  return YYYY + "/" + MM + "/" + DD;
+
+}
