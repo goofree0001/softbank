@@ -1,0 +1,32 @@
+Sub ShowThreadedEmailsByDate()
+    Dim objFolder As Outlook.Folder
+    Dim objThread As Outlook.Conversation
+    Dim objTable As Outlook.Table
+    Dim objRow As Outlook.Row
+    Dim strFilter As String
+    Dim strSort As String
+    
+    '指定したフォルダの取得
+    Set objFolder = Application.Session.PickFolder
+    
+    'ConversationViewをオンにする
+    objFolder.GetConversationView.Enabled = True
+    
+    '現在選択されているスレッドの取得
+    Set objThread = Application.ActiveExplorer.Selection.GetConversation
+    
+    'スレッドに関連するメールを表示するテーブルの作成
+    Set objTable = objFolder.GetTable
+    
+    'フィルターとソート条件の設定
+    strFilter = "[ConversationIndex] LIKE '" & objThread.ConversationIndex & "%'"
+    strSort = "[ReceivedTime]"
+    objTable.Sort strSort, True
+    objTable.Restrict strFilter
+    
+    'テーブル内のすべての行を反復処理する
+    Do Until objTable.EndOfTable
+        Set objRow = objTable.GetNextRow()
+        Debug.Print objRow("Subject") & " " & objRow("ReceivedTime")
+    Loop
+End Sub
