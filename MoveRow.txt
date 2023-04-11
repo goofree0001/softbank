@@ -1,0 +1,11 @@
+function MoveRow() {
+  var sheet1 = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("シート1");
+  var sheet2 = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("シート2");
+
+//  console.log(sheet1.getActiveCell().getRow());
+
+  var sheet1_ActiveCellRow = sheet1.getActiveCell().getRow();
+
+  sheet1.getRange(sheet1_ActiveCellRow, 1, sheet1_ActiveCellRow, sheet1.getLastColumn()).moveTo(sheet2.getRange(sheet2.getLastRow()+1, 1));
+  sheet1.deleteRow(sheet1_ActiveCellRow);
+}
